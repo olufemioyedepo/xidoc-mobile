@@ -1,0 +1,11 @@
+https://pub.dev/packages/searchable_dropdown#-analysis-tab-
+https://developers.arcgis.com/rest/geocode/api-reference/geocoding-reverse-geocode.htm
+http://geocodedev.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=pjson&featureTypes=&location=3.6267927,%206.4782078
+https://www.filledstacks.com/snippet/build-a-flutter-location-service/
+https://stackoverflow.com/questions/6366408/calculating-distance-between-two-latitude-and-longitude-geocoordinates
+https://gps-coordinates.org/distance-between-coordinates.php
+https://inducesmile.com/google-flutter/how-to-create-an-infinite-scroll-with-listview-in-flutter/
+
+::::::::plugins::::::::
+https://pub.dev/packages/searchable_dropdown
+https://pub.dev/packages/floating_search_bar
