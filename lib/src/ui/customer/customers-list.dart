@@ -52,9 +52,12 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
     });
     
     util.getHcmWorkerRecIdFromSharedPrefs().then((onValue){
-      setState(() {
-       workerRecId = onValue; 
-      });
+      if (this.mounted) {
+        setState(() {
+          workerRecId = onValue; 
+        });
+      }
+      
       
       // Get customers count
       getCustomersCount(workerRecId);
@@ -296,7 +299,7 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
 
   @override
   Widget build(BuildContext context) {
-    pr = new ProgressDialog(context,type: ProgressDialogType.Normal);
+    pr = new ProgressDialog(context,type: ProgressDialogType.Normal, isDismissible: false);
     
     pr.style(
       message: 'Please wait...',
@@ -308,7 +311,7 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
       progressTextStyle: TextStyle(
           color: Colors.black, fontSize: 13.0, fontWeight: FontWeight.w400),
       messageTextStyle: TextStyle(
-          color: Colors.black, fontSize: 19.0, fontWeight: FontWeight.w600),
+          color: Colors.black, fontSize: 15.0, fontWeight: FontWeight.w600),
     );
 
 

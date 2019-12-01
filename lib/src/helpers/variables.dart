@@ -12,6 +12,6 @@ const int paymentDepositsPagePage = 10;
 
 
 const menuActions = <String>[
-  'Edit',
-  'Delete',
+  // 'Submit to Workflow',
+  'Delete'
 ];

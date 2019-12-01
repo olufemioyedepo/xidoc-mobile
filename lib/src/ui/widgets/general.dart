@@ -148,6 +148,124 @@ void couldNotCreateResource(BuildContext context, String resourceName){
   );
 }
 
+void submittedToWorkflow(BuildContext context, String resourceName){
+  Widget okButton = FlatButton(
+    child: Text("OK", 
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 15.0,
+        color: Colors.black
+      )
+    ),
+    onPressed: () { 
+      Navigator.of(context, rootNavigator: true).pop('dialog');
+    },
+  );
+
+  AlertDialog alert = AlertDialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(15))
+    ),
+    elevation: 10,
+    title: Text("Success", style: TextStyle(fontWeight: FontWeight.bold)),
+    content: Text(resourceName + ' submitted to workflow.'),
+    actions: [
+      okButton,
+    ],
+  );
+
+  // show the dialog
+  showDialog(
+    barrierDismissible: false,
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
+}
+
+void couldNotSubmitToWorkflow(BuildContext context){
+  Widget okButton = FlatButton(
+    child: Text("OK", 
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 15.0,
+        color: Colors.black
+      )
+    ),
+    onPressed: () { 
+      Navigator.of(context, rootNavigator: true).pop('dialog');
+    },
+  );
+
+  AlertDialog alert = AlertDialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(15))
+    ),
+    elevation: 10,
+    title: Text("Error!", style: TextStyle(fontWeight: FontWeight.bold)),
+    content: Text('Could not submit to workflow. Please try again'),
+    actions: [
+      okButton,
+    ],
+  );
+
+  // show the dialog
+  showDialog(
+    barrierDismissible: false,
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
+}
+
+void couldNotCreateSalesLine(BuildContext context){
+  Widget okButton = FlatButton(
+    child: Text("OK", 
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 15.0,
+        color: Colors.black
+      )
+    ),
+    onPressed: () { 
+      Navigator.of(context, rootNavigator: true).pop('dialog');
+    },
+  );
+
+  AlertDialog alert = AlertDialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(15))
+    ),
+    elevation: 10,
+    title: Text("Warning!", style: TextStyle(fontWeight: FontWeight.bold)),
+    content: Container(
+        height: 80.0,
+        child: Column(
+          children: <Widget>[
+            // Text('Could not add Sales line!               '),
+            // SizedBox(height: 10.0),
+            Text('This Sales order has already been submitted to the workflow.')
+          ],
+        ),
+      ),
+    //content: Text('Could not add Sales Line. This Sales order has already been submitted to the workflow.'),
+    actions: [
+      okButton,
+    ],
+  );
+
+  // show the dialog
+  showDialog(
+    barrierDismissible: false,
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
+}
+
 void showInvalidLoginCredentialsDialog(BuildContext context) {
     // set up the button
     Widget okButton = FlatButton(

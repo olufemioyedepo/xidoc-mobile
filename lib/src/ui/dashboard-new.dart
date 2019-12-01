@@ -190,7 +190,7 @@ class DashboardPageState extends State<NewDashboardTabPage> with AutomaticKeepAl
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: DefaultTabController(
-        length: 2,
+        length: 3,
         child: Scaffold(
           
           appBar: AppBar(
@@ -223,10 +223,10 @@ class DashboardPageState extends State<NewDashboardTabPage> with AutomaticKeepAl
                   icon: Icon(Icons.people), 
                   text: 'Customers'
                 ),
-                /* Tab(
+                Tab(
                   icon: Icon(Icons.payment), 
                   text: 'Deposits'
-                ), */
+                ), 
                 // Tab(icon: Icon(Icons.directions_bike)),
               ],
             ),
@@ -268,7 +268,7 @@ class DashboardPageState extends State<NewDashboardTabPage> with AutomaticKeepAl
                 ),
                 floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               ),
-              /* Scaffold(
+              Scaffold(
                 floatingActionButton: FloatingActionButton(
                   heroTag: null,
                   child: Icon(Icons.payment),
@@ -282,7 +282,7 @@ class DashboardPageState extends State<NewDashboardTabPage> with AutomaticKeepAl
                   },
                 ),
                 floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-              ) */
+              )
               //Icon(Icons.directions_car),
               //Icon(Icons.directions_transit),
               // Icon(Icons.directions_bike),

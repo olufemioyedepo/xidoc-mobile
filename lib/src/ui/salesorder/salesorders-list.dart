@@ -101,6 +101,7 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
 
   final List<PopupMenuItem<String>> _popUpMenuItems = menuActions.map(
     (String value) => PopupMenuItem<String>(
+      enabled: false,
       value: value,
       child: Text(value, style: TextStyle(
         fontFamily: variables.currentFont,
@@ -112,7 +113,7 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
 
   @override
   Widget build(BuildContext context) {
-    pr = new ProgressDialog(context,type: ProgressDialogType.Normal);
+    pr = new ProgressDialog(context,type: ProgressDialogType.Normal, isDismissible: false);
     
     pr.style(
       message: 'Please wait...',
@@ -124,7 +125,7 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
       progressTextStyle: TextStyle(
           color: Colors.black, fontSize: 13.0, fontWeight: FontWeight.w400),
       messageTextStyle: TextStyle(
-          color: Colors.black, fontSize: 19.0, fontWeight: FontWeight.w600),
+          color: Colors.black, fontSize: 15.0, fontWeight: FontWeight.w600),
     );
 
     return Scaffold(
@@ -495,13 +496,13 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 ListTile(
-                  /* trailing: new PopupMenuButton<String>(
+                   trailing: new PopupMenuButton<String>(
                     onSelected: (String action) async {
-                      final ConfirmAction confirmAction = await confirmationDialog(context, 'Delete Customer?', 'Are you sure you want to remove this sales order?'  + '?');
-                      
+                      final ConfirmAction confirmAction = await confirmationDialog(context, 'Remove Sales Order?', 'Are you sure you want to remove this sales order?'  + '?');
+                      print(confirmAction);
                     },
                     itemBuilder: (BuildContext context) => _popUpMenuItems,
-                  ), */
+                  ),
                   title: Text(salesOrder['salesOrderName'] ?? "",
                     style: TextStyle(
                       color: Colors.black87,
@@ -538,17 +539,35 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
                             ),
                           ],
                         ),
-                         Row(
-                           children: <Widget>[
-                             new Text(codixutil.formatDateFromApiResponse((salesOrder['createdOn'])),
-                               style: TextStyle(
-                                 color: Colors.grey,
-                                 fontSize: 14.0,
-                                 fontFamily: variables.currentFont
-                               )
-                             )
-                           ],
-                         )
+                        Row(
+                          children: <Widget>[
+                            new Text(salesOrder['workflowStatus'] ?? "",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 15.0,
+                                fontFamily: variables.currentFont
+                              )
+                            )
+                          ],
+                        ),
+                        Row(
+                          children: <Widget>[
+                            new Padding(
+                              padding: EdgeInsets.only(bottom: 5.0)
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: <Widget>[
+                            new Text(codixutil.formatDateFromApiResponse((salesOrder['createdOn'])),
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14.0,
+                                fontFamily: variables.currentFont
+                              )
+                            )
+                          ],
+                        )
                       ],
                     ),
                   ),
@@ -584,6 +603,7 @@ class SalesOrderListItem extends StatelessWidget{
 
   final List<PopupMenuItem<String>> _popUpMenuItems = menuActions.map(
     (String value) => PopupMenuItem<String>(
+      enabled: false,
       value: value,
       child: Text(value, style: TextStyle(
         fontFamily: variables.currentFont,
