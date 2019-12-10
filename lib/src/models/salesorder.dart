@@ -22,6 +22,7 @@ class SalesOrder {
   String createdOn;
   String salesOrderStatus;
   String workflowStatus;
+  String totalDiscountPercentage;
 
   SalesOrder({
     this.salesOrderNumber,
@@ -31,7 +32,8 @@ class SalesOrder {
     this.salesAgentLatitude,
     this.createdOn,
     this.salesOrderStatus,
-    this.workflowStatus
+    this.workflowStatus,
+    this.totalDiscountPercentage
   });
 
   factory SalesOrder.fromJson(Map<String, dynamic> json) {
@@ -56,6 +58,7 @@ class SalesOrder {
     data['salesAgentLatitude'] = this.salesAgentLatitude;
     data['createdOn'] = this.createdOn;
     data['salesOrderStatus'] = this.salesOrderStatus;
+    data['totalDiscountPercentage'] = this.totalDiscountPercentage;
     return data;
   }
 }

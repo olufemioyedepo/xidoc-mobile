@@ -1,6 +1,7 @@
 import 'package:codix_geofencing/src/ui/customer/customer-create.dart';
 import 'package:codix_geofencing/src/ui/customer/customers-list.dart';
 import 'package:codix_geofencing/src/ui/payments/payments-create.dart';
+import 'package:codix_geofencing/src/ui/payments/payments-list.dart';
 import 'package:codix_geofencing/src/ui/widgets/general.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -269,6 +270,9 @@ class DashboardPageState extends State<NewDashboardTabPage> with AutomaticKeepAl
                 floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               ),
               Scaffold(
+                body: Center(
+                  child: CustomerDepositPage(),
+                ),
                 floatingActionButton: FloatingActionButton(
                   heroTag: null,
                   child: Icon(Icons.payment),

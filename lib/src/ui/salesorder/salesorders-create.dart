@@ -37,11 +37,13 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
   bool loadedCustomers = false;
   bool _canAgentMakeTransaction;
   bool _isLocationEnabled = false;
+  bool isDiscountValid = true;
 
   String _selectedCustomer, _selectCustomerAccount, _selectedCurrency, _employeeName, _employeePersonnelNumber;
   var listOfCustomers;
 
   TextEditingController invoiceAccountController = new TextEditingController();
+  TextEditingController lineDiscountController = new TextEditingController();
   TextEditingController deliveryNameController = new TextEditingController();
   TextEditingController salesResponsibleNameController = new TextEditingController();
   List<DropdownMenuItem> customersDropdownItems = [];
@@ -300,6 +302,19 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
     });
   }
 
+  void validateDiscount() {
+    if (double.parse(lineDiscountController.text) > 100) {
+      setState(() {
+       isDiscountValid = false; 
+      });
+    }
+
+    if (double.parse(lineDiscountController.text) < 100) {
+      setState(() {
+       isDiscountValid = true; 
+      });
+    }
+  }
   Widget releaseProductsSearchable() {
     customersDropdownItems.clear();
 
@@ -351,6 +366,8 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
   @override
   void initState() { 
     super.initState();
+    lineDiscountController.text = "0.0";
+
     getEmployeeName();
     getCustomers();
     getCurrencies();
@@ -368,6 +385,7 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
     salesOrderForSave.salesAgentLatitude = latitude; // onValue.latitude.toString();
     salesOrderForSave.salesAgentLongitude = longitude; // onValue.longitude.toString();
     salesOrderForSave.custAccount = invoiceAccountController.text;
+    salesOrderForSave.totalDiscountPercentage = lineDiscountController.text;
     salesOrderForSave.dateTimeCreated = formattedDate;
     salesOrderForSave.staffPersonnelNumber = _employeePersonnelNumber;
 
@@ -416,33 +434,6 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
             absorbing: !loadedCustomers,
             child: releaseProductsSearchable(),
           ),
-
-          // DropdownButton<String>(
-          //   isDense: true,
-          //   isExpanded: true,
-          //   hint: new Text("Select Customer"),
-          //   value: _selectedCustomer,
-          //   onChanged: (String newValue) {
-          //     setState(() {
-          //       _selectedCustomer = newValue;
-          //       print(newValue);
-          //       invoiceAccountController.text = _selectedCustomer;
-          //     });
-          //   },
-          //   items: customersData.map((customer) {
-          //     return new DropdownMenuItem<String>(
-          //       value: customer["customerAccount"].toString(),
-          //       child: new Text(
-          //         customer["name"],
-          //         style: new TextStyle(
-          //           fontWeight: FontWeight.bold,
-          //           fontFamily: variables.currentFont,
-          //           color: Colors.black
-          //         )
-          //       ),
-          //     );
-          //   }).toList(),
-          // ),
           SizedBox(height: 29.0),
           Row(
             children: <Widget>[
@@ -472,6 +463,57 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
              style: TextStyle(fontWeight: FontWeight.bold),
            ),
           ),
+          Row(
+            children: <Widget>[
+              Text('Total Discount (%)',
+                style: new TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: variables.currentFont,
+                color: Colors.grey
+                )
+              )
+            ],
+          ),
+          Padding(
+            padding: EdgeInsets.only(bottom: 10.0),
+            child: Column(
+              children: <Widget>[
+                TextFormField(
+                  controller: lineDiscountController,
+                  keyboardType: TextInputType.text,
+                  autofocus: false,
+                  maxLength: 5,
+                  validator: (lineDiscount) {
+                    if (lineDiscount.isNotEmpty && double.parse(lineDiscount) > 100 ) {
+                      setState(() {
+                       isDiscountValid = false; 
+                      });
+                      print('Invoice Account is more than 100!');
+                    }
+
+                    if (lineDiscount.isEmpty) {
+                      setState(() {
+                       isDiscountValid = true;
+                       lineDiscountController.text = "0.0";
+                      });
+                      print('Invoice Account  is still empty!');
+                    }
+                    
+                    return null;
+                  },
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Visibility(
+                  visible: !isDiscountValid,
+                  child: Text('Discount cannot be more than 100!', style: TextStyle(color: Colors.red),),
+                ),
+                
+              ],
+            )
+            
+            
+          ),
+          
           SizedBox(height: 10.0),
           Row(
             children: <Widget>[
@@ -551,13 +593,14 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
               padding: EdgeInsets.all(12),
               color: Colors.blue,
               onPressed: () async {
+                validateDiscount();
                 // if form is valid
                 if (_formKey.currentState.validate()) {
                   //check if the location is "On" on user's device
                   isLocationEnabled();
                   if (_isLocationEnabled == false) {
                     print('location is off, user needs to turn on location');
-                  } else if (_isLocationEnabled == true) {
+                  } else if (_isLocationEnabled == true && isDiscountValid == true) {
                     final ConfirmAction confirmAction = await confirmationDialog(context, 'Create Sales Order?', 'Are you sure you want to perform this operation?');
 
                     if (confirmAction.index == 1) {

@@ -64,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
         fit: StackFit.expand,
         children: <Widget>[
           Container(
-            padding: EdgeInsets.only(left: 20.0, right: 20.0),
+            padding: EdgeInsets.only(left: 40.0, right: 40.0),
             child: new Image.asset('assets/images/codix-logo.png'),
           ),
           

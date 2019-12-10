@@ -154,6 +154,25 @@ String formatDateFromApiResponse(String dateFromApi) {
   return formattedDate;
 }
 
+// Returns today's date in YYYY-MM-DD format
+String getTodaysDate() {
+  String todaysDate = '';
+  var now = new DateTime.now();
+  var formatter = new DateFormat('yyyy-MM-dd');
+  todaysDate = formatter.format(now);
+  // print(todaysDate);
+
+  return todaysDate;
+}
+
+String formatSelectedDate(var dateSelected) {
+  String theDate = dateSelected;
+  if (dateSelected == "" ) {
+    return getTodaysDate();
+  }
+  return theDate.substring(0, 10);
+}
+
 String extractAccNoFromCustNameAccount(String customerNameAccount) {
   if (customerNameAccount == "") {
     return "";
@@ -161,6 +180,17 @@ String extractAccNoFromCustNameAccount(String customerNameAccount) {
   
   List splittedStrings = customerNameAccount.split("[");
   String accountNumberWithBrace = splittedStrings[1];
+  String customerAccountNumer = accountNumberWithBrace.substring(0, accountNumberWithBrace.length - 1);
+  return customerAccountNumer;
+}
+
+String extractNameFromCustNameAccount(String customerNameAccount) {
+  if (customerNameAccount == "") {
+    return "";
+  }
+  
+  List splittedStrings = customerNameAccount.split("[");
+  String accountNumberWithBrace = splittedStrings[0];
   String customerAccountNumer = accountNumberWithBrace.substring(0, accountNumberWithBrace.length - 1);
   return customerAccountNumer;
 }
@@ -190,7 +220,7 @@ List<String> getPaymentMethods() {
 
   paymentMethods.add('Non');
   paymentMethods.add('Cheque');
-  paymentMethods.add('Electronic Transfer');
+  paymentMethods.add('Transfer');
   paymentMethods.add('Cash');
   paymentMethods.add('USSD');
  

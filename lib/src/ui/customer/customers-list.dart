@@ -10,7 +10,6 @@ import 'package:codix_geofencing/src/helpers/variables.dart' as variables;
 import 'package:http/http.dart' as http;
 import 'package:progress_dialog/progress_dialog.dart';
 
-enum WhyFarther { harder, smarter, selfStarter, tradingCharter }
 
 class CustomerListPage extends StatefulWidget {
   @override
@@ -18,6 +17,9 @@ class CustomerListPage extends StatefulWidget {
 }
 
 class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAliveClientMixin<CustomerListPage>{
+  @override
+  bool get wantKeepAlive => true;
+
   ScrollController _scrollController = ScrollController();
   ProgressDialog pr;
 
@@ -34,7 +36,6 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
   String workerRecId;
   int customersCount = 0;
   
-
   @override
   void initState() {
     
@@ -58,13 +59,11 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
         });
       }
       
-      
       // Get customers count
       getCustomersCount(workerRecId);
       _customersList = getCustomers(workerRecId);
      
     });
-
   }
 
   @override
@@ -148,9 +147,11 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
   }
 
   Future<CustomersList> getCustomers(String hcmWorkerRecId) async {
-    setState(() {
-      currentTrip = 0;
-    });
+    if (this.mounted) {
+      setState(() {
+        currentTrip = 0;
+      });
+    }
     
     try {
       print('Current trip at initial getting customers: $currentTrip');
@@ -493,7 +494,6 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
     );
   }
 
-  @override
-  bool get wantKeepAlive => true;
+  
 }
 

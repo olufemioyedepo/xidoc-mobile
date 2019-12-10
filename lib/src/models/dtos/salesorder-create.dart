@@ -6,6 +6,7 @@ class SalesOrderForSave {
   String salesType;
   String salesAgentLongitude;
   String salesAgentLatitude;
+  String totalDiscountPercentage;
 
   SalesOrderForSave({
     this.dateTimeCreated,
@@ -14,7 +15,8 @@ class SalesOrderForSave {
     this.salesName,
     this.salesType,
     this.salesAgentLongitude,
-    this.salesAgentLatitude
+    this.salesAgentLatitude,
+    this.totalDiscountPercentage
   });
 
   factory SalesOrderForSave.fromJson(Map<String, dynamic> json) {
@@ -25,7 +27,8 @@ class SalesOrderForSave {
       salesName: json['salesName'],
       salesType: json['salesType'],
       salesAgentLongitude: json['salesAgentLongitude'],
-      salesAgentLatitude: json['salesAgentLatitude']
+      salesAgentLatitude: json['salesAgentLatitude'],
+      totalDiscountPercentage: json['totalDiscountPercentage']
     );
   }
 
@@ -38,6 +41,7 @@ class SalesOrderForSave {
     map["salesType"] = salesType;
     map["salesAgentLongitude"] = salesAgentLongitude;
     map["salesAgentLatitude"] = salesAgentLatitude;
+    map["totalDiscountPercentage"] = totalDiscountPercentage;
  
     return map;
   }
