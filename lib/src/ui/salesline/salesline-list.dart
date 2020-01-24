@@ -79,15 +79,13 @@ class _SalesLineListState extends State<SalesLineListPage> {
   }
 
   void evaluateWorkflowStatus() {
-    setState(() {
-      if (widget.salesOrder.workflowStatus == "Submitted" || widget.salesOrder.workflowStatus == "Approved" || 
-          widget.salesOrder.workflowStatus == "PendingApproval" || widget.salesOrder.workflowStatus == "Rejected" || 
-          widget.salesOrder.workflowStatus == "Cancelled") {
-        setState(() {
-         enableSubmitToWorkFlow = false; 
-        });
-      }
-    });
+    if (widget.salesOrder.workflowStatus == "Submitted" || widget.salesOrder.workflowStatus == "Approved" || 
+        widget.salesOrder.workflowStatus == "PendingApproval" || widget.salesOrder.workflowStatus == "Rejected" || 
+        widget.salesOrder.workflowStatus == "Cancelled") {
+      setState(() {
+        enableSubmitToWorkFlow = false; 
+      });
+    }
   }
 
   Future<void> getCurrentWorkflowStatus(String salesOrderNumber) async {
@@ -110,6 +108,7 @@ class _SalesLineListState extends State<SalesLineListPage> {
   Future<SalesLineList> _salesLinesList;
   ProgressDialog pr;
   ProgressDialog workflowPr;
+  ProgressDialog processPr;
   
 
   var salesLinesList;
@@ -170,8 +169,22 @@ class _SalesLineListState extends State<SalesLineListPage> {
   Widget build(BuildContext context) {
 
     workflowPr = new ProgressDialog(context,type: ProgressDialogType.Normal, isDismissible: false);
+    processPr = new ProgressDialog(context,type: ProgressDialogType.Normal, isDismissible: false);
 
     workflowPr.style(
+      message: 'Processing...',
+      borderRadius: 2.0,
+      backgroundColor: Colors.white,
+      progressWidget: CircularProgressIndicator(),
+      elevation: 4.0,
+      insetAnimCurve: Curves.easeIn,
+      progressTextStyle: TextStyle(
+          color: Colors.black, fontSize: 13.0, fontWeight: FontWeight.w400),
+      messageTextStyle: TextStyle(
+          color: Colors.black, fontSize: 15.0, fontWeight: FontWeight.w600),
+    );
+
+    processPr.style(
       message: 'Processing...',
       borderRadius: 2.0,
       backgroundColor: Colors.white,
@@ -316,11 +329,11 @@ class _SalesLineListState extends State<SalesLineListPage> {
                           return buildSalesLineCard(salesLine);
                         },
                       ), onRefresh: () async {
-                        pr.show();
+                        processPr.show();
                         print ('refreshing sales lines list...');
                         setState(() {
                           getSalesLines(widget.salesOrder.salesOrderNumber).then((salesLines){
-                            pr.hide();
+                            processPr.hide();
                           }).catchError((onError){
                             pr.hide();
                           });
@@ -369,7 +382,7 @@ class _SalesLineListState extends State<SalesLineListPage> {
           child: Icon(Icons.add),
             onPressed: () {
               // cannot navigate to sales line creation page if the Workflow status is 'Submitted'
-              if (widget.salesOrder.workflowStatus == 'Submitted') {
+              if (widget.salesOrder.workflowStatus == 'Submitted' || widget.salesOrder.workflowStatus == 'Approved') {
                 couldNotCreateSalesLine(context);
                 print('Cannot add sales line');
               } else {
@@ -402,8 +415,6 @@ class _SalesLineListState extends State<SalesLineListPage> {
       messageTextStyle: TextStyle(
           color: Colors.black, fontSize: 15.0, fontWeight: FontWeight.w600),
     );
-
-    
 
     return Container(
       child: Card(
@@ -484,6 +495,49 @@ class _SalesLineListState extends State<SalesLineListPage> {
                       fontFamily: variables.currentFont
                     ),
                   ),
+                  new Text('Discount %',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 15.0,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: variables.currentFont
+                    ),
+                  ),
+                ],
+              ),
+              
+              Row( 
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: <Widget>[
+                  new Text(salesLine['orderedSalesQuantity'].toString() ?? "",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: variables.currentFont
+                    ),
+                  ),
+                  new Text((salesLine['lineDiscountPercentage'].toString() ?? 0),
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: variables.currentFont
+                    ),
+                  ),
+                ],
+              ),
+              Row( 
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: <Widget>[
+                  new Text('Discount Amount',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 15.0,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: variables.currentFont
+                    ),
+                  ),
                   new Text('Net Amount',
                     style: TextStyle(
                       color: Colors.grey,
@@ -494,10 +548,11 @@ class _SalesLineListState extends State<SalesLineListPage> {
                   ),
                 ],
               ),
+
               Row( 
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: <Widget>[
-                  new Text(salesLine['orderedSalesQuantity'].toString() ?? "",
+                  new Text(variables.currencySymbol + currencyFormatter.format(salesLine['lineDiscountAmount'] ?? 0),
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 16.0,
@@ -515,6 +570,7 @@ class _SalesLineListState extends State<SalesLineListPage> {
                   ),
                 ],
               ),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
@@ -533,7 +589,7 @@ class _SalesLineListState extends State<SalesLineListPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
-                 
+                 /* 
                   InkWell(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20.0, 0.0, 0.0, 0.0),
@@ -543,7 +599,8 @@ class _SalesLineListState extends State<SalesLineListPage> {
                       int salesLineRecId = salesLine['salesLineRecId'];
                       deleteSalesLineConfirmation(context, salesLineRecId);
                     },
-                  ),                  
+                  ),
+                   */                 
                 ],
               ),
             ],
