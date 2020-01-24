@@ -82,7 +82,7 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
 
       setState(() {
         salesOrdersCount = responseJson;
-        var trips = salesOrdersCount / variables.salesOrdersPagePage;
+        var trips = salesOrdersCount / variables.salesOrdersPerPage;
         roundTrips = trips.ceil();
         roundTrips--;
 
@@ -183,7 +183,6 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
                         highlightColor: Colors.grey,
                         onTap: () => setState(() {
                           pr.show();
-
                           fetchSalesOrders(_hcmWorkerRecId).then((onValue){
                             pr.hide();
                           });
@@ -275,7 +274,8 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
                               ),
                               highlightColor: Colors.grey,
                               onTap: () => setState(() {
-                                //getCustomers(workerRecId);
+                                // getCustomers(workerRecId);
+                                _salesOrdersList = fetchSalesOrders(_hcmWorkerRecId);
                               })
                             )
                           ],
@@ -301,7 +301,14 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
                   Padding(
                     padding: EdgeInsets.only(bottom: 10.0),
                   ),
-                  CircularProgressIndicator(),
+                  Container(
+                    height: 20.0,
+                    width: 20.0,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.0,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
                   Padding(
                     padding: EdgeInsets.only(bottom: 10.0),
                   ),
@@ -338,7 +345,7 @@ class ListBodyState extends State<ListBody> with AutomaticKeepAliveClientMixin<L
 
       salesOrdersLoaded = true;
 
-      print('Customers found at trip: $currentTrip');
+      print('Sales Orders found at trip: $currentTrip');
       print(responseJson);
       
       return new SalesOrdersList.fromJson(responseJson);
