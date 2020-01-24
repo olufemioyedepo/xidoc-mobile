@@ -20,3 +20,20 @@ class AgentGeolocationParameter {
     return map;
   }
 }
+
+class RangeChecker {
+  String agentLatitude;
+  String agentLongitude;
+  String employeeId;
+  
+  RangeChecker({this.agentLatitude, this.agentLongitude, this.employeeId});
+
+  Map toMap() {
+    var map = new Map<String, dynamic>();
+    map["agentLatitude"] = agentLatitude;
+    map["agentLongitude"] = agentLongitude;
+    map["employeeId"] = employeeId;
+ 
+    return map;
+  }
+}
