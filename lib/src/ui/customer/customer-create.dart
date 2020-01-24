@@ -129,9 +129,11 @@ class _CustomerCreatePageState extends State<CustomerCreatePage> {
       });
     });
 
-    getCustomerGroups();
-    getCurrencies();
-    getStates();
+    if (this.mounted) {
+      getCustomerGroups();
+      getCurrencies();
+      getStates();
+    }
   }
 
   Future<int> createCustomer(var _body) async {

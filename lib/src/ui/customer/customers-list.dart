@@ -79,7 +79,7 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
 
       setState(() {
         myCustomersCount = responseJson;
-        var trips = myCustomersCount/variables.customersPagePage;
+        var trips = myCustomersCount/variables.customersPerPage;
         roundTrips = trips.ceil();
         roundTrips--;
 
@@ -164,7 +164,6 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
         customersCount = responseJson.length;
         customersList = responseJson;
         currentTrip++;
-        //print(customersList);
 
         if (customersCount == 0) {
           noCustomer = true;
@@ -179,10 +178,7 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
       customersLoaded = true;
       return new CustomersList.fromJson(responseJson);
     } catch (e) {
-      if (e.osError.message == "No address associated with hostname") {
-        couldNotConnectToServer(context);
-        return null;
-      }
+      couldNotConnectToServer(context);
     }
   }
 
@@ -328,7 +324,7 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: <Widget>[
                     Padding(
-                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height / 2.9)
+                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height / 3.2)
                     ),
                     Center(
                       child: Icon(Icons.info),
@@ -477,7 +473,14 @@ class _CustomerListState extends State<CustomerListPage> with AutomaticKeepAlive
                   Padding(
                     padding: EdgeInsets.only(bottom: 10.0),
                   ),
-                  CircularProgressIndicator(),
+                  Container(
+                    height: 15.0,
+                    width: 15.0,
+                    child: CircularProgressIndicator(
+                      backgroundColor: Colors.white,
+                      strokeWidth: 2.0,
+                    ),
+                  ),
                   Padding(
                     padding: EdgeInsets.only(bottom: 10.0),
                   ),
