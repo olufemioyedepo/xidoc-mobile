@@ -143,12 +143,63 @@ Future<bool> clearSharedPrefs() async {
   return prefs.clear();
 }
 
+Future<bool> isRepWithinSalesTerritory() async {
+  bool agentWithinRange;
+  RangeChecker agentWithinRangePayload = new RangeChecker();
+  Future<UserLocation> currentLocation = getLocation();
+
+  final prefs = await SharedPreferences.getInstance();
+  String employeeId = prefs.getString('staffpersonnelnumber');
+
+  currentLocation.then((onValue) async {
+    var latitude = onValue.latitude.toString();
+    var longitude = onValue.longitude.toString();
+    
+    agentWithinRangePayload.employeeId = employeeId;
+    agentWithinRangePayload.agentLatitude = latitude;
+    agentWithinRangePayload.agentLongitude = longitude;
+    print(agentWithinRangePayload.toMap());
+    
+    Dio dio = new Dio();    
+    try {
+      print('Checking if sales rep can make transaction...');
+      Response response = await dio.post(variables.baseUrl + 'geolocation/agentwithinrange', data: agentWithinRangePayload.toMap(), options: Options(headers: {'Content-Type': 'application/json'}));
+      var statusCode = response.statusCode;
+      
+      if (statusCode == 200) {
+          agentWithinRange = response.data;
+      }
+    } catch (error) {
+      
+      print(error.toString());
+      if (error.response == null) {
+      } else if (error.response.statusCode == 400) {
+
+      }
+    }
+  });
+  
+  print('Is agent within sales territory: ' + agentWithinRange.toString());
+  return agentWithinRange;
+}
+
 String formatDateFromApiResponse(String dateFromApi) {
   String formattedDate = "";
 
   if (dateFromApi != null) {
     var parsedDate = DateTime.parse(dateFromApi);
     formattedDate = DateFormat("EEE, MMMM d, y 'at' h:mm a").format(parsedDate);
+  }
+  
+  return formattedDate;
+}
+
+String formatShortDateFromApiResponse(String dateFromApi) {
+  String formattedDate = "";
+
+  if (dateFromApi != null) {
+    var parsedDate = DateTime.parse(dateFromApi);
+    formattedDate = DateFormat("EEE, MMMM d, y").format(parsedDate);
   }
   
   return formattedDate;
@@ -281,6 +332,17 @@ Future<String> getActiveTab() async {
   String activeTab = prefs.getString('currentTab');
   print('Gotten active tab: ' + activeTab);
   return activeTab;
+}
+
+String formatEmployeeId(String employeeId)
+{
+  if (employeeId != "")
+  {
+    String formattedEmployeeId = employeeId.replaceAll('/', '-'); 
+    return formattedEmployeeId;
+  }
+
+  return "";
 }
 
 Future<UserLocation> getLocation() async {
