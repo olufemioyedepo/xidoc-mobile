@@ -1,6 +1,6 @@
 class PersonnelNumber {
-  final String value;
-
+  //final String value;
+  String value;
   PersonnelNumber({ this.value });
 
   Map toMap() {
