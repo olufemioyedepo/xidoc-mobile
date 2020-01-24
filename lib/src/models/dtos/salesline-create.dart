@@ -1,34 +1,35 @@
 //import 'dart:ffi';
 
 class SalesLineCreateObject {
-  final String salesId;
-  final int salesQty;
-  final String warehouse;
-  final String itemId;
-  final String salesAgentLongitude;
-  final String salesAgentLatitude;
+  final String salesOrderNumber;
+  final String lineDiscountPercentage;
+  final String lineDiscountAmount;
+  final int orderedSalesQuantity;
+  final String shippingWarehouseId;
+  final String itemNumber;
+  
 
-  SalesLineCreateObject({this.salesId, this.salesQty, this.warehouse, this.itemId, this.salesAgentLongitude, this.salesAgentLatitude});
+  SalesLineCreateObject({this.salesOrderNumber, this.lineDiscountPercentage, this.lineDiscountAmount, this.orderedSalesQuantity, this.shippingWarehouseId, this.itemNumber});
 
   factory SalesLineCreateObject.fromJson(Map<String, dynamic> json) {
     return SalesLineCreateObject(
-      salesId: json['salesId'],
-      salesQty: json['salesQty'],
-      warehouse: json['warehouse'],
-      itemId: json['itemId'],
-      salesAgentLongitude: json['salesAgentLongitude'],
-      salesAgentLatitude: json['salesAgentLatitude']
+      salesOrderNumber: json['salesOrderNumber'],
+      lineDiscountPercentage: json['lineDiscountPercentage'],
+      lineDiscountAmount: json['lineDiscountAmount'],
+      orderedSalesQuantity: json['orderedSalesQuantity'],
+      shippingWarehouseId: json['shippingWarehouseId'],
+      itemNumber: json['itemNumber']
     );
   }
 
   Map toMap() {
     var map = new Map<String, dynamic>();
-    map["salesId"] = salesId;
-    map["salesQty"] = salesQty;
-    map["warehouse"] = warehouse;
-    map["itemId"] = itemId;
-    map["salesAgentLongitude"] = salesAgentLongitude;
-    map["salesAgentLatitude"] = salesAgentLatitude;
+    map["salesOrderNumber"] = salesOrderNumber;
+    map["lineDiscountPercentage"] = lineDiscountPercentage;
+    map["lineDiscountAmount"] = lineDiscountAmount;
+    map["orderedSalesQuantity"] = orderedSalesQuantity;
+    map["shippingWarehouseId"] = shippingWarehouseId;
+    map["itemNumber"] = itemNumber;
  
     return map;
   }
