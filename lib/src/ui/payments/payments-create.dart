@@ -32,12 +32,13 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
 
   var currentSelectedValue;
 
-  bool _saving = false;
+  bool _saving = false, _checkingCreditSetup = false;
   bool _customersLoaded = false;
   final dateFormat = DateFormat("dd-M-yyyy");
   String _selectedCustomer, _selectCustomerAccount, _selectedMonth, _selectedPaymentMethod, _selectedCurrency;
   String dropdownValue = 'Select Month';
   String employeeId = '', employeeName = '', paymentDate = 'Select Payment Date...';
+  int creditTableCount, creditTableCountAbsorb = 0;
 
   Future _selectDate() async {
     DateTime picked = await showDatePicker(
@@ -62,6 +63,45 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
     });
   }
   
+  Future<int> getCreditTableCount(String employeeId, String month, String fiscalYear) async {
+    setState(() {
+     _checkingCreditSetup = true;
+     creditTableCount = 1;
+    });
+    String formattedEmployeeId = codixutil.formatEmployeeId(employeeId);
+     
+    //Future.delayed(const Duration(milliseconds: 500), () async {
+    try {
+      var res = await http.get(variables.baseUrl + 'customerdeposit/creditcount/' + formattedEmployeeId + '/' + month + '/' + fiscalYear);
+      var resBody = json.decode(res.body);
+
+      if (res.statusCode == 200) {
+        if (this.mounted) {
+          setState(() {
+            creditTableCount = resBody;
+            creditTableCountAbsorb = resBody;
+            return creditTableCount;
+          });
+        }
+      }
+
+      setState(() {
+        _checkingCreditSetup = false; 
+      });
+    } catch (e) {
+      setState(() {
+        _checkingCreditSetup = false;
+        creditTableCountAbsorb = 0;
+      });
+      print('could not get credit table count');
+    }
+
+     return creditTableCount;
+     //}
+     //);
+     }
+
+
   getEmployeePersonnelNumber() async {
     codixutil.getUserPersonnelNumberFromSharedPrefs().then((onValue) {
       setState(() {
@@ -69,6 +109,7 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
       });
     });
   }
+  
   Future<void> getCustomers() async {
     try {
       var res = await http.get(variables.baseUrl + 'customers');
@@ -109,6 +150,7 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
       // _currenciesLoaded = true;
     }
   }
+  
   @override
   void initState() {    
     super.initState();
@@ -209,7 +251,7 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
     );
   }
 
-   Widget paymentCreateForm() {
+  Widget paymentCreateForm() {
     return new Container(
       padding: EdgeInsets.all(15.0),
         child: new Form(
@@ -257,6 +299,7 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
                   ),
                 ],
               ),
+              
               Row(
                 children: <Widget>[
                   new Flexible(
@@ -325,6 +368,14 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
                         setState(() {
                           _selectedMonth = newValue;
                         });
+                        // make request to get credit table count
+                        if (_selectedMonth.isNotEmpty == true && employeeId.isNotEmpty == true && fiscalYearController.text.isNotEmpty == true)
+                        {
+                          print('getting credit table count...');
+                          getCreditTableCount(employeeId, _selectedMonth, fiscalYearController.text).then((creditTableCount){
+                            print('credit table count: $creditTableCount');
+                          });
+                        }
                         print(_selectedMonth);
                       },
                       items: _months.map((String value) {
@@ -337,6 +388,45 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
                   ),
                 ],
               ),
+              Visibility(
+                visible: _checkingCreditSetup,
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      padding: EdgeInsets.only(left: 2.0),
+                      height: 14,
+                      width: 15,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.0,
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        child: Text('Checking credit report setup for $_selectedMonth...', 
+                                style: TextStyle(
+                                  color: Colors.green
+                                )
+                              ),
+                        padding: EdgeInsets.only(left: 5.0),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              Visibility(
+                visible: creditTableCount == 0,
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.only(left: 2.0),
+                        child: Text('Credit report entry does not exist for $_selectedMonth!', style: TextStyle(color: Colors.red)),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+
               Padding(
                 padding: EdgeInsets.only(bottom: 15.0),
               ),
@@ -483,42 +573,46 @@ class _PaymentsCreatePageState extends State<PaymentsCreatePage> {
               Padding(
                 padding: EdgeInsets.only(bottom: 15.0),
               ),
-              RaisedButton(
-                color: Colors.blue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+              AbsorbPointer(
+                //absorbing: creditTableCountAbsorb == 0 || _selectedCustomer.isEmpty || paymentDate.isEmpty || _selectedMonth.isEmpty || _selectedPaymentMethod.isEmpty || _selectedCurrency.isEmpty,
+                absorbing: creditTableCountAbsorb == 0,
+                child: RaisedButton(
+                  color: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.all(12),
+                  child: Text('Save', 
+                    style: TextStyle(fontFamily: variables.currentFont, color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold)
+                  ),
+                  onPressed: () async {
+                    final ConfirmAction confirmAction = await confirmationDialog(context, 'Capture Customer Deposit?', 'Are you sure you want to perform this operation?');
+
+                      if (confirmAction.index == 1) {
+                        CustomerDeposit customerDeposit = new CustomerDeposit();
+
+                        customerDeposit.amountPaid = double.parse(amountPaidController.text.trim() ?? 0);
+                        customerDeposit.bankName = bankNameController.text.trim();
+                        customerDeposit.currency = _selectedCurrency;
+                        customerDeposit.custName = codixutil.extractNameFromCustNameAccount(_selectedCustomer);
+                        customerDeposit.custId = codixutil.extractAccNoFromCustNameAccount(_selectedCustomer);
+                        //customerDeposit.depositorName = 
+                        customerDeposit.employeeId = employeeId;
+                        customerDeposit.employeeName = employeeName;
+                        customerDeposit.fiscalYear = fiscalYearController.text;
+                        customerDeposit.month = _selectedMonth;
+                        customerDeposit.paymentDate = codixutil.formatSelectedDate(paymentDate);   //.getTodaysDate();
+                        customerDeposit.pmtMethod = _selectedPaymentMethod;
+                        customerDeposit.processingStatus = "InReview";
+                        customerDeposit.wHTDeducted = whtDeductedController.text == "" ? 0.0 : double.parse(whtDeductedController.text.trim());
+
+                        print(customerDeposit.toMap());
+                        doPaymentDepositCreate(customerDeposit.toMap());
+                      }
+                  },
                 ),
-                padding: EdgeInsets.all(12),
-                child: Text('Save', 
-                  style: TextStyle(fontFamily: variables.currentFont, color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold)
-                ),
-                onPressed: () async {
-                  final ConfirmAction confirmAction = await confirmationDialog(context, 'Capture Customer Deposit?', 'Are you sure you want to perform this operation?');
+              ),
 
-                    if (confirmAction.index == 1) {
-                      CustomerDeposit customerDeposit = new CustomerDeposit();
-
-                      customerDeposit.amountPaid = double.parse(amountPaidController.text.trim() ?? 0);
-                      customerDeposit.bankName = bankNameController.text.trim();
-                      customerDeposit.currency = _selectedCurrency;
-                      customerDeposit.custName = codixutil.extractNameFromCustNameAccount(_selectedCustomer);
-                      customerDeposit.custId = codixutil.extractAccNoFromCustNameAccount(_selectedCustomer);
-                      //customerDeposit.depositorName = 
-                      customerDeposit.employeeId = employeeId;
-                      customerDeposit.employeeName = employeeName;
-                      customerDeposit.fiscalYear = fiscalYearController.text;
-                      customerDeposit.month = _selectedMonth;
-                      customerDeposit.paymentDate = codixutil.formatSelectedDate(paymentDate);   //.getTodaysDate();
-                      customerDeposit.pmtMethod = _selectedPaymentMethod;
-                      customerDeposit.processingStatus = "InReview";
-                      customerDeposit.wHTDeducted = whtDeductedController.text == "" ? 0.0 : double.parse(whtDeductedController.text.trim());
-
-                      print(customerDeposit.toMap());
-                      doPaymentDepositCreate(customerDeposit.toMap());
-                    }
-                  
-                },
-              )
             ]
         )
       )
