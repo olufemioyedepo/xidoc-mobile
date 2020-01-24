@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:codix_geofencing/src/models/dtos/personnelnumber.dart';
 import 'package:codix_geofencing/src/ui/widgets/general.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +32,30 @@ class _LoginState extends State<LoginPage> {
   TextEditingController passwordController = new TextEditingController();
 
   bool _saving = false;
+  bool isSalesAgent = false;
   final authRepository = AuthRepository();
+
+  Future<void> isSalesAgentCheck(String employeeId) async {
+    PersonnelNumber personnelNumber = new PersonnelNumber();
+    personnelNumber.value = employeeId;
+
+    Dio dio = new Dio();
+    try {
+      print('Checking if employee is a sales rep...');
+
+      Response response = await dio.post(variables.baseUrl + 'employees/issalesagent', data: personnelNumber.toMap(), options: Options(headers: {'Content-Type': 'application/json'}));
+      var statusCode = response.statusCode;
+      
+      if (statusCode == 200) {
+        setState(() {
+          isSalesAgent = response.data;
+          print('Completed Sales Rep check...$isSalesAgent');
+        });
+      }
+    } catch (error) {
+      print('Could not complete sales agent check, an error occured...');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,51 +131,66 @@ class _LoginState extends State<LoginPage> {
                     email: emailController.text,
                     password: passwordController.text
                   );
+
+                  setState(() {
+                    _saving = true;
+                  });
+
                   LoginResponse loginResponse = await doLogin(variables.baseUrl + 'auth/login', body: userLogin.toMap());
                   // Future<LoginResponse> loginResponse = authRepository.login(userLogin);
                   if (loginResponse != null)
                   {
-                    // employee has been set as Sales Agent
-                    if (loginResponse.isSalesAgent == "true")
-                    {
-                      // extract content of the response object and store as shared preferences object
-                      storeUserInfoOnSharedPrefs(loginResponse);
+                    // use the employee id to carry out a 'is sales agent' check 
+                    isSalesAgentCheck(loginResponse.personnelNumber).then((onValue){
+                      // employee has been set as Sales Agent
+                      if (isSalesAgent == true)
+                      {
+                        setState(() {
+                          _saving = false;
+                        });
+                        // extract content of the response object and store as shared preferences object
+                        storeUserInfoOnSharedPrefs(loginResponse);
 
-                      // Fluttertoast.showToast(
-                      //   msg: "Login successful!",
-                      //   toastLength: Toast.LENGTH_LONG,
-                      //   gravity: ToastGravity.BOTTOM,
-                      //   timeInSecForIos: 1,
-                      //   backgroundColor: Colors.black,
-                      //   textColor: Colors.white,
-                      //   fontSize: 16.0
-                      // );
-                      // redirect to the dashboard
+                        // Fluttertoast.showToast(
+                        //   msg: "Login successful!",
+                        //   toastLength: Toast.LENGTH_LONG,
+                        //   gravity: ToastGravity.BOTTOM,
+                        //   timeInSecForIos: 1,
+                        //   backgroundColor: Colors.black,
+                        //   textColor: Colors.white,
+                        //   fontSize: 16.0
+                        // );
+                        // redirect to the dashboard
 
-                      // Scaffold.of(context).showSnackBar(
-                      //   SnackBar(
-                      //     content: Text('Logged in successfully...', 
-                      //       style: TextStyle(
-                      //         fontWeight: FontWeight.bold,
-                      //         fontFamily: variables.currentFont
-                      //       ),
-                      //     ),
-                      //   ),
-                      // );
+                        // Scaffold.of(context).showSnackBar(
+                        //   SnackBar(
+                        //     content: Text('Logged in successfully...', 
+                        //       style: TextStyle(
+                        //         fontWeight: FontWeight.bold,
+                        //         fontFamily: variables.currentFont
+                        //       ),
+                        //     ),
+                        //   ),
+                        // );
 
-                      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) =>
-                      NewDashboardTabPage()), (Route<dynamic> route) => false);
-                      // Navigator.push(
-                      //   context,
-                      //   PageTransition(type: PageTransitionType.leftToRightWithFade, 
-                      //   child: NewDashboardTabPage()
-                      //   )
-                      // );
-                    } else {
-                      // employee has not been set as Sales Agent
-                      // display an access-denied dialog
-                      showAccessDeniedDialog(context, loginResponse.firstName);                       
-                    }
+                        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) =>
+                        NewDashboardTabPage()), (Route<dynamic> route) => false);
+                        // Navigator.push(
+                        //   context,
+                        //   PageTransition(type: PageTransitionType.leftToRightWithFade, 
+                        //   child: NewDashboardTabPage()
+                        //   )
+                        // );
+                      } else {
+                        setState(() {
+                          _saving = false;
+                        });
+                        // employee has not been set as Sales Agent
+                        // display an access-denied dialog
+                        showAccessDeniedDialog(context, loginResponse.firstName);                       
+                      }
+                    });
+                    
                   } else if (loginResponse == null) {
                     print(loginResponse.toString() + ' at login');
                     // invalid user account credentials
@@ -212,8 +252,6 @@ class _LoginState extends State<LoginPage> {
     );
   }
 
-  
-
   showAccessDeniedDialog(BuildContext context, String firstName) {
     String contentText;
 
@@ -270,10 +308,6 @@ class _LoginState extends State<LoginPage> {
 
   Future<LoginResponse> doLogin(String url, {Map body}) async {
 
-    setState(() {
-       _saving = true;
-    });
-
     Map<String, String> requestHeaders = {
       'Content-Type': 'application/json',
     };
@@ -281,9 +315,6 @@ class _LoginState extends State<LoginPage> {
     return http.post(url, headers: requestHeaders, body: json.encode(body)).then((http.Response response) {
       final int statusCode = response.statusCode;
 
-      setState(() {
-        _saving = false;
-      });
       if (statusCode == 200) {
         
       } else if (statusCode == 404) {
@@ -308,5 +339,9 @@ class _LoginState extends State<LoginPage> {
       
       //logger.d(e);
     });
+  }
+
+  Future<void> loginAction() async {
+
   }
 }
