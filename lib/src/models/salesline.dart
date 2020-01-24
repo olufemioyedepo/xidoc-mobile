@@ -24,6 +24,8 @@ class SalesLine {
   String createdOn;
   double salesPrice;
   double lineAmount;
+  double lineDiscountAmount;
+  double lineDiscountPercentage;
   int orderedSalesQuantity;
   int salesLineRecId;
 
@@ -36,6 +38,8 @@ class SalesLine {
     this.createdOn,
     this.salesPrice,
     this.lineAmount,
+    this.lineDiscountAmount,
+    this.lineDiscountPercentage,
     this.orderedSalesQuantity,
     this.salesLineRecId
   });
