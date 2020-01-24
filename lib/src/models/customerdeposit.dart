@@ -2,6 +2,9 @@ class CustomerDeposit {
   double amountPaid;
   String bankName;
   String currency;
+  // String journalNum;
+  // String postedWithJournalNum;
+  // String sysBankAccount;
   String fiscalYear;
   String custId;
   String custName;
@@ -14,11 +17,13 @@ class CustomerDeposit {
   String processingStatus;
   double wHTDeducted;
 
+
+// JournalNum,WHTDeducted,BankName,Currency,PostedWithJournalNum,SysBankAccount
   CustomerDeposit(
     { 
-      this.amountPaid, this.bankName, this.currency, this.fiscalYear, this.custId,
-      this.custName, this.depositorName, this.employeeId, this.employeeName, this.month,
-      this.paymentDate, this.pmtMethod, this.processingStatus, this.wHTDeducted
+      this.amountPaid, this.bankName, this.currency, 
+      this.fiscalYear, this.custId, this.custName, this.depositorName, this.employeeId, 
+      this.employeeName, this.month, this.paymentDate, this.pmtMethod, this.processingStatus, this.wHTDeducted
     }
   );
 
@@ -27,6 +32,9 @@ class CustomerDeposit {
       amountPaid: json['amountPaid'],
       bankName: json['bankName'],
       currency: json['currency'],
+      // journalNum: json['journalNum'],
+      // postedWithJournalNum: json['postedWithJournalNum'],
+      // sysBankAccount: json['sysBankAccount'],
       fiscalYear: json['fiscalYear'],
       custId: json['custId'],
       custName: json['custName'],

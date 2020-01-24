@@ -16,6 +16,13 @@ class CustomerPayment {
   String fiscalYear;
   String month;
   double amountPaid;
+  double whtDeducted;
+  int recordId;
+  String journalNum;
+  String bankName;
+  String postedWithJournalNum;
+  String sysBankAccount;
+  String currency;
   String pmtMethod;
   String processingStatus;
   String custName;
@@ -26,6 +33,13 @@ class CustomerPayment {
     this.fiscalYear,
     this.month,
     this.amountPaid,
+    this.whtDeducted,
+    this.recordId,
+    this.journalNum,
+    this.bankName,
+    this.postedWithJournalNum,
+    this.sysBankAccount,
+    this.currency,
     this.pmtMethod,
     this.processingStatus,
     this.custName,
@@ -38,6 +52,13 @@ class CustomerPayment {
       fiscalYear: json['fiscalYear'],
       month: json['month'],
       amountPaid: json['amountPaid'],
+      whtDeducted: json['whtDeducted'],
+      recordId: json['recordId'],
+      journalNum: json['journalNum'],
+      bankName: json['bankName'],
+      postedWithJournalNum: json['postedWithJournalNum'],
+      sysBankAccount: json['sysBankAccount'],
+      currency: json['currency'],
       pmtMethod: json['pmtMethod'],
       processingStatus: json['processingStatus'],
       custName: json['custName'],
