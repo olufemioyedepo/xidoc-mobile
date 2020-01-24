@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 //import 'package:codix_geofencing/src/models/location.dart';
+import 'package:codix_geofencing/src/models/dtos/geolocationparameters.dart';
 import 'package:codix_geofencing/src/models/location.dart';
 import 'package:codix_geofencing/src/models/salesorder.dart';
 import 'package:codix_geofencing/src/ui/salesline/salesline-list.dart';
 import 'package:codix_geofencing/src/ui/widgets/general.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +41,10 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
   bool _isLocationEnabled = false;
   bool isDiscountValid = true;
 
+  bool _checkingTerritoryBoundaries = false, customersLoading = false;
+  bool showOutOfBoundariesMessage = false;
+  bool agentWithinRange = false;
+
   String _selectedCustomer, _selectCustomerAccount, _selectedCurrency, _employeeName, _employeePersonnelNumber;
   var listOfCustomers;
 
@@ -51,11 +57,13 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
 
   List customersData = List();
   List currenciesData = List();
-  
-  
 
   Future<void> getCustomers() async {
     try {
+      setState(() {
+        customersLoading = true;
+      });
+
       var res = await http.get(variables.baseUrl + 'customers');
       var resBody = json.decode(res.body);
 
@@ -63,10 +71,14 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
         setState(() {
           customersData = resBody;
           loadedCustomers = true;
+          customersLoading = false;
         });
       }
     } catch (e) {
-      loadedCustomers = true;
+      setState(() {
+        customersLoading = true;
+        loadedCustomers = true;
+      });
     }
   }
 
@@ -94,6 +106,84 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
     salesResponsibleNameController.text = _employeeName;
   }
   
+  Future<void> locationSettingsCheck() async{
+    ServiceStatus serviceStatus = await PermissionHandler().checkServiceStatus(PermissionGroup.location);
+    bool enabled = (serviceStatus == ServiceStatus.enabled);
+
+    setState(() {
+      _isLocationEnabled = enabled;
+      // if location setting is on, check if sales rep is within range
+      if (_isLocationEnabled == true)
+      {
+        _checkingTerritoryBoundaries = true;
+        print("User location settings: $_isLocationEnabled" );
+        isAgentWithinRange();
+      } else {
+        // display 'Location is off' warning and ask them to try again
+        
+      }
+    });
+  }
+
+  Future<void> isAgentWithinRange() async {
+    RangeChecker agentWithinRangePayload = new RangeChecker();
+    Future<UserLocation> currentLocation = util.getLocation();
+
+    final prefs = await SharedPreferences.getInstance();
+    String employeeId = prefs.getString('staffpersonnelnumber');
+
+    currentLocation.then((onValue) async {
+      var latitude = onValue.latitude.toString();
+      var longitude = onValue.longitude.toString();
+      
+      agentWithinRangePayload.employeeId = employeeId;
+      agentWithinRangePayload.agentLatitude = latitude;
+      agentWithinRangePayload.agentLongitude = longitude;
+
+      // print(agentWithinRangePayload.toMap());
+
+      Dio dio = new Dio();
+      
+      try {
+        setState(() {
+         _checkingTerritoryBoundaries = true; 
+        });
+        print('Checking if sales rep can make transaction...');
+
+        Response response = await dio.post(variables.baseUrl + 'geolocation/agentwithinrange', data: agentWithinRangePayload.toMap(), options: Options(headers: {'Content-Type': 'application/json'}));
+        var statusCode = response.statusCode;
+        
+        if (statusCode == 200) {
+          setState(() {
+            _checkingTerritoryBoundaries = false;
+            agentWithinRange = response.data;
+            print('Is agent within sales territory: ' + agentWithinRange.toString());
+
+            if (agentWithinRange == false) {
+              showOutOfBoundariesMessage = true;
+            } else {
+              getCurrencies();
+              getCustomers();
+            }
+          });
+          
+        }
+      } catch (error) {
+        _checkingTerritoryBoundaries = false;
+        
+        print(error.toString());
+        if (error.response == null) {
+        } else if (error.response.statusCode == 400) {
+          setState(() {
+            // _statusCodeResponse  = error.response.statusCode;
+          });
+        }
+      }
+    });
+    
+    return agentWithinRange;
+  }
+
   Future<SalesOrderForSaveResponse> createSalesOrder(String url, {Map body}) async {
     pr = new ProgressDialog(context,type: ProgressDialogType.Normal);
     
@@ -368,22 +458,21 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
     super.initState();
     lineDiscountController.text = "0.0";
 
+    locationSettingsCheck();
     getEmployeeName();
-    getCustomers();
-    getCurrencies();
-
-    //_listOfCustomers = this.getCustomers();
+    //getCustomers();
+    //getCurrencies();
   }
 
-  doSalesOrderCreate(String latitude, String longitude) async {
+  doSalesOrderCreate() async {
 
     var now = new DateTime.now();
     var formatter = new DateFormat('yyyy-MM-dd');
     String formattedDate = formatter.format(now);
     SalesOrderForSave salesOrderForSave = new SalesOrderForSave();
 
-    salesOrderForSave.salesAgentLatitude = latitude; // onValue.latitude.toString();
-    salesOrderForSave.salesAgentLongitude = longitude; // onValue.longitude.toString();
+    //salesOrderForSave.salesAgentLatitude = latitude; // onValue.latitude.toString();
+    //salesOrderForSave.salesAgentLongitude = longitude; // onValue.longitude.toString();
     salesOrderForSave.custAccount = invoiceAccountController.text;
     salesOrderForSave.totalDiscountPercentage = lineDiscountController.text;
     salesOrderForSave.dateTimeCreated = formattedDate;
@@ -406,6 +495,78 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          Visibility(
+            visible: _isLocationEnabled == true && _checkingTerritoryBoundaries == true,
+            child: Center(
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 5.0),
+                  ),
+                  Container(
+                    height: 20.0,
+                    width: 20.0,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.0,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 5.0),
+                  ),
+                  Text('Checking territory mapping...', style: TextStyle(fontFamily: variables.currentFont, color: Colors.green)),
+                    Padding(padding: EdgeInsets.only(bottom: 20.0),
+                  ),
+                ],
+              ),
+            )
+          ),
+
+          Visibility(
+            visible: showOutOfBoundariesMessage == true,
+            child: Center(
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 10.0),
+                  ),
+                  Text("You're currently outside of your sales region(s)!", 
+                    style: TextStyle(
+                      color: Colors.red
+                    )
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 15.0),
+                  ),
+                ],
+              )
+            )
+          ),
+
+          Visibility(
+            visible: _isLocationEnabled == false,
+            
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Text('Your Location setting is currently turned off, turn it on and retry...', 
+                      style: TextStyle(
+                        color: Colors.red
+                      )
+                    ),
+                  RaisedButton(
+                    onPressed: () async {
+                      locationSettingsCheck();
+                    },
+                    child: Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          ),
+
           Row(
             children: <Widget>[
               Text('Customer',
@@ -425,7 +586,7 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
                     strokeWidth: 2.0,
                   ),
                 ),
-                visible: !loadedCustomers,
+                visible: customersLoading,
               ),
             ],
           ),
@@ -480,7 +641,7 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
               children: <Widget>[
                 TextFormField(
                   controller: lineDiscountController,
-                  keyboardType: TextInputType.text,
+                  keyboardType: TextInputType.number,
                   autofocus: false,
                   maxLength: 5,
                   validator: (lineDiscount) {
@@ -567,6 +728,7 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
               )
             ],
           ),
+
           Padding(
             padding: EdgeInsets.fromLTRB(0.0, 10.0, 0.0, 10.0) ,
             child: TextFormField(
@@ -584,61 +746,45 @@ class _SalesOrderCreatePageState extends State<SalesOrderCreatePage> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: double.infinity),
-            child: RaisedButton(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: EdgeInsets.all(12),
-              color: Colors.blue,
-              onPressed: () async {
-                validateDiscount();
-                // if form is valid
-                if (_formKey.currentState.validate()) {
-                  //check if the location is "On" on user's device
-                  isLocationEnabled();
-                  if (_isLocationEnabled == false) {
-                    print('location is off, user needs to turn on location');
-                  } else if (_isLocationEnabled == true && isDiscountValid == true) {
-                    final ConfirmAction confirmAction = await confirmationDialog(context, 'Create Sales Order?', 'Are you sure you want to perform this operation?');
-
-                    if (confirmAction.index == 1) {
-                        setState(() {
-                          _saving = true; 
-                        });
-                        Future<UserLocation> currentLocation = util.getLocation();
-                        final prefs = await SharedPreferences.getInstance();
-                        String hcmWorkerRecId = prefs.getString('hcmWorkerRecId');
-
-                        currentLocation.then((onValue) async {
-                          var latitude = onValue.latitude.toString();
-                          var longitude = onValue.longitude.toString();
-                          
-                          util.isAgentWithinRange(latitude, longitude, hcmWorkerRecId).then((value) async {
-                            setState(() {
-                            _saving = false; 
-                            });
-                            print(confirmAction.index);
-                            setState(() {
-                              _canAgentMakeTransaction = value;
-                              if (_canAgentMakeTransaction == true) {
-                                doSalesOrderCreate(latitude, longitude);
-                              } else {
-                                outOfTerritoryDialog(context);
-                              }
-                            });
-
-                          });
-
-                        });
-                    }
-                  }
-                }
-              },
-              child: Text('Save', style: TextStyle(fontFamily: variables.currentFont, color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold)),
-            ),
+          
+          Padding(
+            padding: EdgeInsets.only(top: 10.0)
           ),
+          AbsorbPointer(
+            absorbing: agentWithinRange == false,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: double.infinity),
+              child: RaisedButton(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.all(12),
+                  color: Colors.blue,
+                  onPressed: () async {
+                    print('hhh');
+                    validateDiscount();
+                    // if form is valid
+                    if (_formKey.currentState.validate()) {
+                      //check if the location is "On" on user's device
+                      
+                      if (isDiscountValid == true) {
+                        final ConfirmAction confirmAction = await confirmationDialog(context, 'Create Sales Order?', 'Are you sure you want to perform this operation?');
+
+                        if (confirmAction.index == 1) {
+                            setState(() {
+                              _saving = true; 
+                            });
+                            doSalesOrderCreate();
+                        }
+                      }
+                    }
+                  },
+                  child: Text('Save', style: TextStyle(fontFamily: variables.currentFont, color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold)),
+                ),
+            ),
+          )
+
+          
         ],
       ),
     );
