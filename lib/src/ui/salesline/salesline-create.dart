@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:codix_geofencing/src/helpers/util.dart';
+import 'package:codix_geofencing/src/models/dtos/geolocationparameters.dart';
 
 import 'package:codix_geofencing/src/models/dtos/salesline-create.dart';
 import 'package:codix_geofencing/src/models/location.dart';
@@ -18,6 +19,7 @@ import 'package:location/location.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // import 'package:auto_size_text/auto_size_text.dart';
 
@@ -36,6 +38,8 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
 
   TextEditingController salesOrderNumberController = new TextEditingController();
   TextEditingController unitCostController = new TextEditingController();
+  TextEditingController discountAmountController = new TextEditingController();
+  TextEditingController discountPercentageController = new TextEditingController();
   TextEditingController netAmountController = new TextEditingController();
   
   UserLocation _currentLocation;
@@ -43,6 +47,8 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
   String _selectedProductNumber;
   String selectedValue;
   String dropdownValue = 'One';
+  String locationCheckText = '';
+
 
   double _salesPrice, _netAmount;
 
@@ -51,8 +57,13 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
   
   bool _saving = false;
   bool _isLocationOn;
-  bool _canAgentMakeTransaction;
-  bool _productsLoaded = false;
+  bool _isLocationEnabled = false;
+  bool _checkingTerritoryBoundaries = false;
+  //bool _canAgentMakeTransaction;
+  bool _productsLoaded = false, productsLoading = false;
+  //bool _checkingTerritoryBoundaries = false;
+  bool showOutOfBoundariesMessage = false;
+  bool agentWithinRange = false, doneCheckingTerritoryMapping = false;
   
   List releasedProducts = List();
   List warehouses = List();
@@ -61,8 +72,6 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
   
   var location = Location();
 
-  
-   
   Future<UserLocation> getLocation() async {
     try {
       var userLocation = await location.getLocation();
@@ -80,10 +89,13 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
   @override
   void initState() { 
     super.initState();
-    getReleasedProducts();
-    getWarehouses();
+    locationSettingsCheck();
+    //getReleasedProducts();
+    //getWarehouses();
     initializeQuantities();
   }
+
+  
 
   void initializeQuantities() {
     List<int> temp = List();
@@ -91,7 +103,7 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
     //temp.clear();
     //quantities.clear();
 
-    for (int i = 1; i <= 100; i++) {
+    for (int i = 1; i <= 200; i++) {
       temp.add(i);
     }
     setState(() {
@@ -101,6 +113,10 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
   }
 
   Future<void> getReleasedProducts() async {
+    setState(() {
+      productsLoading = true;
+    });
+
     try {
       var res = await http.get(variables.baseUrl + 'products/released');
       var resBody = json.decode(res.body);
@@ -109,12 +125,17 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
         setState(() {
           releasedProducts = resBody;
           _productsLoaded = true;
+          productsLoading = false;
         });
       }
     } catch (e) {
-      setState(() {
-       _productsLoaded = true; 
-      });
+      if (this.mounted) {
+        setState(() {
+          productsLoading = false;
+          _productsLoaded = true; 
+        });
+      }
+      
     }
     
   }
@@ -152,12 +173,112 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
     return salesPrice;
   }
 
-  double calculateNetAmount(int quantity, double salesPrice) {
-    double netAmount = quantity * salesPrice;
+  double calculateNetAmount(int quantity, double salesPrice, String discountAmount,  String discountPercentage) {
+    //double netAmount = quantity * salesPrice;
+    double netAmount;
+    double discAmt = discountAmount.isNotEmpty ? double.parse(discountAmount) : 0.0;
+    double discPercentage = discountPercentage.isNotEmpty ? double.parse(discountPercentage) : 0.0;
+
+    print('Quantity: $quantity');
+    print('Sales price: $salesPrice');
+    print('Discount amount: $discAmt');
+    print('Discount percentage: $discPercentage');
+
+    netAmount = quantity * salesPrice;
+
+    if (discAmt >= 0.0) {
+      netAmount = (salesPrice - discAmt) * quantity;
+      print('Net Amt: $netAmount');
+    }
+
+    if (discPercentage >= 0.0) {
+      netAmount = netAmount - (netAmount * (discPercentage/100));
+    }
+    
     return netAmount;
   }
 
-  
+  Future<void> locationSettingsCheck() async{
+    ServiceStatus serviceStatus = await PermissionHandler().checkServiceStatus(PermissionGroup.location);
+    bool enabled = (serviceStatus == ServiceStatus.enabled);
+
+    setState(() {
+      _isLocationEnabled = enabled;
+      // if location setting is on, check if sales rep is within range
+      if (_isLocationEnabled == true)
+      {
+        //_checkingTerritoryBoundaries = true;
+        print("User location settings: $_isLocationEnabled" );
+        isAgentWithinRange();
+      } else {
+        // display 'Location is off' warning and ask them to try again
+        
+      }
+    });
+  }
+
+  Future<void> isAgentWithinRange() async {
+    setState(() {
+      _checkingTerritoryBoundaries = true;
+      print('Checking if sales rep can make transaction...');
+    });
+    
+    RangeChecker agentWithinRangePayload = new RangeChecker();
+    Future<UserLocation> currentLocation = codixutil.getLocation();
+
+    final prefs = await SharedPreferences.getInstance();
+    String employeeId = prefs.getString('staffpersonnelnumber');
+
+    currentLocation.then((onValue) async {
+      var latitude = onValue.latitude.toString();
+      var longitude = onValue.longitude.toString();
+      
+      agentWithinRangePayload.employeeId = employeeId;
+      agentWithinRangePayload.agentLatitude = latitude;
+      agentWithinRangePayload.agentLongitude = longitude;
+
+      print(agentWithinRangePayload.toMap());
+
+      Dio dio = new Dio();
+      
+      try {
+        Response response = await dio.post(variables.baseUrl + 'geolocation/agentwithinrange', data: agentWithinRangePayload.toMap(), options: Options(headers: {'Content-Type': 'application/json'}));
+        var statusCode = response.statusCode;
+        if (statusCode == 200) {
+          setState(() {
+            // _checkingTerritoryBoundaries = false;
+            doneCheckingTerritoryMapping = true;
+            _checkingTerritoryBoundaries = false;
+            agentWithinRange = response.data;
+            print('Is agent within sales territory: ' + agentWithinRange.toString());
+            if (agentWithinRange == true) {
+              // Get products, warehouses
+                getReleasedProducts();
+                getWarehouses();
+            }
+            if (agentWithinRange == false) {
+              setState(() {
+              _checkingTerritoryBoundaries = false;
+              });
+              // outOfTerritoryDialog(context);
+            }
+          });
+          
+        }
+      } catch (error) {
+        if (this.mounted) {
+          setState(() {
+            doneCheckingTerritoryMapping = true;
+          });
+        }
+        
+        print(error.toString());
+        if (error.response == null) {
+        } else if (error.response.statusCode == 400) {
+        }
+      }
+    });
+  }
 
   Future<int> createSalesLine(var _body) async {
     setState(() {
@@ -184,6 +305,7 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
       } else if (error.response.statusCode == 400) {
         // Sales line create request failed
         setState(() {
+          _saving = false;
          _statusCodeResponse  = error.response.statusCode;
         });
         couldNotCreateResource(context, 'sales line');
@@ -193,7 +315,6 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
     return _statusCodeResponse;
   }
 
-  
   Widget releaseProductsSearchable() {
     releasedProductitems.clear();
 
@@ -239,7 +360,7 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
           print(unitCostText);
           unitCostController.text = unitCostText;
           if (_salesPrice >= 0 && quantityDropDown >= 0) {
-            double netAmount = calculateNetAmount(quantityDropDown, _salesPrice);
+            double netAmount = calculateNetAmount(quantityDropDown, _salesPrice, discountAmountController.text, discountPercentageController.text);
             netAmountController.text = variables.currencySymbol + currencyFormatter.format(netAmount).toString();
           }
         });
@@ -254,6 +375,69 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
           key: _formKey,
           child: new ListView(
             children: <Widget>[
+              Visibility(
+                visible: _isLocationEnabled == false,
+                
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Text('Your Location setting is currently turned off, turn it on and retry...', 
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontFamily: variables.currentFont
+                          )
+                        ),
+                      RaisedButton(
+                        onPressed: () async {
+                          locationSettingsCheck();
+                        },
+                        child: Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              ),
+              Visibility(
+                visible: _checkingTerritoryBoundaries == true,
+                child: Center(child: Column(
+                  children: <Widget>[
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 5.0),
+                    ),
+                    Container(
+                      height: 20.0,
+                      width: 20.0,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.0,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 5.0),
+                    ),
+                    Text('Checking territory mapping...', style: TextStyle(fontFamily: variables.currentFont, color: Colors.green)),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 20.0),
+                    ),
+                  ],
+                )),
+              ),
+              Visibility(
+                visible: agentWithinRange == false && doneCheckingTerritoryMapping == true,
+                child: Center(child: Column(
+                  children: <Widget>[
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 10.0),
+                    ),
+                    Text('You are currently outside your sales territory...', style: TextStyle(fontFamily: variables.currentFont, color: Colors.red, fontSize: 15.0)),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 15.0),
+                    ),
+                  ],
+                )),
+              ),
               Row(
                 children: <Widget>[
                   Text('Product',
@@ -280,7 +464,7 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
                         strokeWidth: 2.0,
                       ),
                     ),
-                    visible: !_productsLoaded,
+                    visible: productsLoading,
                   ),
                 ],
               ),
@@ -399,9 +583,8 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
                 onChanged: (int newValue) {
                   setState(() {
                     quantityDropDown = newValue;
-
                     // calculate net mount and update the Net Amount textfield
-                    _netAmount = calculateNetAmount(quantityDropDown, _salesPrice);
+                    _netAmount = calculateNetAmount(quantityDropDown, _salesPrice, discountAmountController.text, discountPercentageController.text);
                     String netAmountText = variables.currencySymbol + currencyFormatter.format(_netAmount);
                     netAmountController.text = netAmountText;
                   });
@@ -438,7 +621,71 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
                   fontWeight: FontWeight.bold
                 ),
               ),
-              
+              Padding(
+                padding: EdgeInsets.only(bottom: 20.0)
+              ),
+              Row(
+                children: <Widget>[
+                  Text('Discount Amount',
+                    style: new TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: variables.currentFont,
+                    color: Colors.grey
+                    )
+                  )
+                ],
+              ),
+              new TextFormField(
+                controller: discountAmountController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                autofocus: false,
+                decoration: new InputDecoration(
+                ),
+                style: TextStyle(
+                  fontFamily: variables.currentFont,
+                  fontWeight: FontWeight.bold
+                ),
+                onChanged: (discountAmount) {
+                  print('print discount amt: $discountAmount');
+                  _netAmount = calculateNetAmount(quantityDropDown, _salesPrice, discountAmountController.text, discountPercentageController.text);
+                  String netAmountText = variables.currencySymbol + currencyFormatter.format(_netAmount);
+                  netAmountController.text = netAmountText;
+                },
+              ),
+              Padding(
+                padding: EdgeInsets.only(bottom: 20.0)
+              ),
+              Row(
+                children: <Widget>[
+                  Text('Discount Percentage',
+                    style: new TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: variables.currentFont,
+                    color: Colors.grey
+                    )
+                  )
+                ],
+              ),
+              new TextFormField(
+                controller: discountPercentageController,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+
+                autofocus: false,
+                decoration: new InputDecoration(
+                ),
+                style: TextStyle(
+                  fontFamily: variables.currentFont,
+                  fontWeight: FontWeight.bold
+                ),
+                onChanged: (discountPercentage) {
+                  print('print percentage: $discountPercentage');
+                  _netAmount = calculateNetAmount(quantityDropDown, _salesPrice, discountAmountController.text, discountPercentageController.text);
+                  String netAmountText = variables.currencySymbol + currencyFormatter.format(_netAmount);
+                  netAmountController.text = netAmountText;
+                },
+              ),
               Padding(
                 padding: EdgeInsets.only(bottom: 30.0)
               ),
@@ -464,104 +711,55 @@ class _SalesLineCreateState extends State<SalesLineCreatePage> {
               Padding(
                 padding: EdgeInsets.only(bottom: 20.0),
               ),
-              RaisedButton(
-                color: Colors.blue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: EdgeInsets.all(12),
-                onPressed: () async {
-                  // check if location is enabled
-                  isLocationEnabled().then((onValue) async {
-                    setState(() {
-                      _isLocationOn = onValue;  
-                    });
-                    
-                    // if location is not enabled, display a warning dailog
-                    if (_isLocationOn == false) {
-                      turnOnLocationPrompt(context);
-                    } else {
-                      final ConfirmAction confirmAction = await confirmationDialog(context, 'Create Sales Line?', 'Are you sure you want to perform this operation?');
-                        
-                      if (confirmAction.index == 1) {
-                        setState(() {
-                        _saving = true; 
-                        });
-
-                        Future<UserLocation> currentLocation = getLocation();
-                        final prefs = await SharedPreferences.getInstance();
-                        String hcmWorkerRecId = prefs.getString('hcmWorkerRecId');
-
-                        currentLocation.then((onValue) async {
-                          var latitude = onValue.latitude.toString();
-                          var longitude = onValue.longitude.toString();
+              AbsorbPointer(
+                absorbing: agentWithinRange == false,
+                child: RaisedButton(
+                  color: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.all(12),
+                  onPressed: () async {
+                    final ConfirmAction confirmAction = await confirmationDialog(context, 'Create Sales Line?', 'Are you sure you want to perform this operation?');
                           
-                          codixutil.isAgentWithinRange(latitude, longitude, hcmWorkerRecId).then((value) async {
-                            setState(() {
-                            _saving = false; 
-                            });
-                            print(confirmAction.index);
-                            setState(() {
-                              _canAgentMakeTransaction = value;
-                              if (confirmAction.index == 1) {
-                                doSalesLineCreate(latitude, longitude);
-                              }
-                            });
-
-                          });
-
-                        });
-                      }
-
-                          
+                    if (confirmAction.index == 1) {
+                      doSalesLineCreate();
                     }
+                    
 
-                  });
-
-                },
-                child: Text('Save', 
-                  style: TextStyle(fontFamily: variables.currentFont, color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold)
+                  },
+                  child: Text('Save', 
+                    style: TextStyle(fontFamily: variables.currentFont, color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold)
+                  ),
                 ),
               ),
+              
             ],
           ),
         )
     );
   }
 
-  doSalesLineCreate(String latitude, String longitude) async {
-  // if _canAgentMakeTransaction == true, agent can make transaction, else
-  // display an out of territory range dialog to the user
-  if (_canAgentMakeTransaction == true) {
+  doSalesLineCreate() async {
+    SalesLineCreateObject salesLineCreate = new SalesLineCreateObject(
+      itemNumber: _selectedProductNumber,
+      lineDiscountAmount: discountAmountController.text,
+      lineDiscountPercentage: discountPercentageController.text,
+      salesOrderNumber: widget.salesOrderHeaderNumber,
+      orderedSalesQuantity: quantityDropDown,
+      shippingWarehouseId: _selectedWarehouse
+    );
 
-    // display a yes/no confirmation dialog to the user
-    
-  SalesLineCreateObject salesLineCreate = new SalesLineCreateObject(
-    itemId: _selectedProductNumber,
-    salesAgentLatitude: latitude,
-    salesAgentLongitude: longitude,
-    salesId: widget.salesOrderHeaderNumber,
-    salesQty: quantityDropDown,
-    warehouse: _selectedWarehouse
-  );
+    var salesLineForSave = salesLineCreate.toMap();
+    print(salesLineForSave);
 
-  var salesLineForSave = salesLineCreate.toMap();
-  print(salesLineForSave);
+    if (salesLineCreate.itemNumber == null || salesLineCreate.shippingWarehouseId == null || salesLineCreate.orderedSalesQuantity == null) {
+      emptyRequiredFields(context);
+    } else {
+      var salesLineCreateResponse = await createSalesLine(salesLineCreate.toMap());
+      print(salesLineCreateResponse);
 
-  if (salesLineCreate.itemId == null || salesLineCreate.warehouse == null || salesLineCreate.salesQty == null) {
-    emptyRequiredFields(context);
-  } else {
-    var salesLineCreateResponse = await createSalesLine(salesLineCreate.toMap());
-    print(salesLineCreateResponse);
-
-  }
-
-  setState(() {
-    _saving = false;
-  });
-  } else {
-    outOfTerritoryDialog(context);
-  }
+    }
   }
 
   @override
