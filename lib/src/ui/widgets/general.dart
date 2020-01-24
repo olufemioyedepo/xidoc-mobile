@@ -77,6 +77,42 @@ void couldNotDeleteCustomer(BuildContext context){
     );
   }
 
+  void couldNotDeleteCustomerDeposit(BuildContext context){
+    Widget okButton = FlatButton(
+      child: Text("OK", 
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 15.0,
+          color: Colors.black
+        )
+      ),
+      onPressed: () { 
+        Navigator.of(context, rootNavigator: true).pop('dialog');
+      },
+    );
+
+    AlertDialog alert = AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(15))
+      ),
+      elevation: 10,
+      title: Text("Error!", style: TextStyle(fontWeight: FontWeight.bold)),
+      content: Text('Could not delete customer deposit!'),
+      actions: [
+        okButton,
+      ],
+    );
+
+    // show the dialog
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
 void turnOnLocationPrompt(BuildContext context){
     Widget okButton = FlatButton(
       child: Text("OK", 
@@ -398,6 +434,43 @@ void outOfTerritoryDialog(BuildContext context){
     elevation: 10,
     title: Text("Warning!", style: TextStyle(fontWeight: FontWeight.bold)),
     content: Text('You are currently outside of your sales region!'),
+    actions: [
+      okButton,
+    ],
+  );
+
+  // show the dialog
+  showDialog(
+    barrierDismissible: false,
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
+}
+
+void cannotDeleteCustomerDepositDialog(BuildContext context){
+  Widget okButton = FlatButton(
+    child: Text("OK", 
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 15.0,
+        color: Colors.blue
+      )
+    ),
+    onPressed: () { 
+      Navigator.of(context, rootNavigator: true).pop('dialog');
+    },
+  );
+
+  AlertDialog alert = AlertDialog(
+    
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(15))
+    ),
+    elevation: 10,
+    title: Text("Warning!", style: TextStyle(fontWeight: FontWeight.bold)),
+    content: Text("Only customer deposits with 'In Review' status can be deleted!"),
     actions: [
       okButton,
     ],
